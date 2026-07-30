@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blox Fruits Random Gacha</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #111827;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #f59e0b;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+
+        /* Container khung quay */
+        .gacha-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            background: #1f2937;
+            border: 4px solid #374151;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        /* Mũi tên chỉ định ở chính giữa */
+        .pointer {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #ef4444;
+            z-index: 10;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+        }
+
+        /* Khung hiển thị thanh trượt */
+        .reel-window {
+            width: 100%;
+            height: 140px;
+            background: #111827;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid #4b5563;
+        }
+
+        /* Thanh chứa danh sách các thẻ */
+        .reel-track {
+            display: flex;
+            position: absolute;
+            left: 0;
+            top: 10px;
+            height: 120px;
+            will-change: transform;
+        }
+
+        /* Thẻ đại diện cho 1 trái ác quỷ */
+        .fruit-card {
+            width: 100px;
+            height: 120px;
+            margin: 0 5px;
+            background: #374151;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+
+        .fruit-card .emoji {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+        }
+
+        .fruit-card .name {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+            padding: 0 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        .fruit-card .rarity {
+            font-size: 0.65rem;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        /* Màu nền theo độ hiếm */
+        .Common { border-color: #9ca3af; background: #1f2937; }
+        .Uncommon { border-color: #22c55e; background: #064e3b; }
+        .Rare { border-color: #3b82f6; background: #1e3a8a; }
+        .Legendary { border-color: #a855f7; background: #581c87; }
+        .Mythical { border-color: #ef4444; background: #7f1d1d; }
+
+        /* Nút quay & Bảng kết quả */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            gap: 15px;
+        }
+
+        .spin-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            border: none;
+            padding: 12px 36px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+            transition: all 0.2s;
+        }
+
+        .spin-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+        }
+
+        .spin-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            min-height: 30px;
+            text-align: center;
+        }
+
+        /* Lịch sử quay */
+        .history {
+            width: 100%;
+            max-width: 700px;
+            margin-top: 20px;
+            background: #1f2937;
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .history h3 {
+            margin-bottom: 10px;
+            color: #9ca3af;
+        }
+
+        .history-list {
+            list-style: none;
+            max-height: 150px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .history-item {
+            background: #111827;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🏴‍☠️ Blox Fruits Gacha Spinner</h1>
+
+    <div class="gacha-container">
+        <div class="pointer"></div>
+        <div class="reel-window" id="reelWindow">
+            <div class="reel-track" id="reelTrack"></div>
+        </div>
+
+        <div class="controls">
+            <button class="spin-btn" id="spinBtn" onclick="spin()">QUAY TRÁI (SPIN)</button>
+            <div class="result-display" id="resultDisplay">Hãy bấm quay để thử vận may!</div>
+        </div>
+    </div>
+
+    <div class="history">
+        <h3>📜 Lịch sử quay:</h3>
+        <ul class="history-list" id="historyList"></ul>
+    </div>
+
+    <script>
+        // Dữ liệu danh sách Trái Ác Quỷ & Tỷ lệ %
+        const fruitsData = [
+            { name: "Rocket", emoji: "🚀", rarity: "Common", chance: 7.3 },
+            { name: "Spin", emoji: "🌪️", rarity: "Common", chance: 7.2 },
+            { name: "Chop", emoji: "⚔️", rarity: "Common", chance: 7.0 },
+            { name: "Spring", emoji: "🌸", rarity: "Common", chance: 6.1 },
+            { name: "Bomb", emoji: "💣", rarity: "Common", chance: 6.0 },
+            { name: "Smoke", emoji: "☁️", rarity: "Common", chance: 6.0 },
+            { name: "Spike", emoji: "📌", rarity: "Common", chance: 6.0 },
+
+            { name: "Flame", emoji: "🔥", rarity: "Uncommon", chance: 5.0 },
+            { name: "Falcon", emoji: "🦅", rarity: "Uncommon", chance: 4.0 },
+            { name: "Ice", emoji: "❄️", rarity: "Uncommon", chance: 4.0 },
+            { name: "Sand", emoji: "🏜️", rarity: "Uncommon", chance: 3.0 },
+            { name: "Dark", emoji: "🌑", rarity: "Uncommon", chance: 2.2 },
+            { name: "Diamond", emoji: "💎", rarity: "Uncommon", chance: 2.1 },
+
+            { name: "Light", emoji: "💡", rarity: "Rare", chance: 2.0 },
+            { name: "Rubber", emoji: "🎈", rarity: "Rare", chance: 1.9 },
+            { name: "Barrier", emoji: "🛡️", rarity: "Rare", chance: 1.8 },
+            { name: "Ghost", emoji: "👻", rarity: "Rare", chance: 1.7 },
+            { name: "Creation", emoji: "🧱", rarity: "Rare", chance: 1.6 },
+
+            { name: "Magma", emoji: "🌋", rarity: "Legendary", chance: 1.5 },
+            { name: "Quake", emoji: "💥", rarity: "Legendary", chance: 1.3 },
+            { name: "Love", emoji: "❤️", rarity: "Legendary", chance: 1.1 },
+            { name: "Spider", emoji: "🕷️", rarity: "Legendary", chance: 1.0 },
+            { name: "Sound", emoji: "🔊", rarity: "Legendary", chance: 0.9 },
+            { name: "Phoenix", emoji: "🔥", rarity: "Legendary", chance: 0.8 },
+            { name: "Portal", emoji: "🌀", rarity: "Legendary", chance: 0.7 },
+            { name: "Lightning", emoji: "⚡", rarity: "Legendary", chance: 0.6 },
+            { name: "Pain", emoji: "🤕", rarity: "Legendary", chance: 0.5 },
+            { name: "Blizzard", emoji: "🌨️", rarity: "Legendary", chance: 0.4 },
+
+            { name: "Gravity", emoji: "🪐", rarity: "Mythical", chance: 0.4 },
+            { name: "Mammoth", emoji: "🦣", rarity: "Mythical", chance: 0.35 },
+            { name: "T-Rex", emoji: "🦖", rarity: "Mythical", chance: 0.3 },
+            { name: "Dough", emoji: "🍩", rarity: "Mythical", chance: 0.25 },
+            { name: "Shadow", emoji: "🌑", rarity: "Mythical", chance: 0.2 },
+            { name: "Venom", emoji: "☠️", rarity: "Mythical", chance: 0.2 },
+            { name: "Control", emoji: "🎮", rarity: "Mythical", chance: 0.15 },
+            { name: "Spirit", emoji: "👻", rarity: "Mythical", chance: 0.15 },
+            { name: "Leopard", emoji: "🐆", rarity: "Mythical", chance: 0.1 },
+            { name: "Kitsune", emoji: "🦊", rarity: "Mythical", chance: 0.045 },
+            { name: "Yeti", emoji: "❄️", rarity: "Mythical", chance: 0.045 },
+            { name: "Gas", emoji: "⛽", rarity: "Mythical", chance: 0.2 },
+            { name: "Dragon", emoji: "🐉", rarity: "Mythical", chance: 0.001 }
+        ];
+
+        const CARD_WIDTH = 110; // 100px width + 10px margin
+        const TARGET_INDEX = 50; // Vị trí thẻ trúng thưởng trên băng chuyền
+        let isSpinning = false;
+
+        // 1. Thuật toán chọn ngẫu nhiên theo tỷ lệ phần trăm (Weighted Random)
+        function getRandomFruit() {
+            const totalChance = fruitsData.reduce((sum, item) => sum + item.chance, 0);
+            let randomNum = Math.random() * totalChance;
+
+            for (let fruit of fruitsData) {
+                if (randomNum < fruit.chance) {
+                    return fruit;
+                }
+                randomNum -= fruit.chance;
+            }
+            return fruitsData[0];
+        }
+
+        // Tạo 1 thẻ HTML cho Trái ác quỷ
+        function createCardElement(fruit) {
+            const card = document.createElement('div');
+            card.className = `fruit-card ${fruit.rarity}`;
+            card.innerHTML = `
+                <div class="emoji">${fruit.emoji}</div>
+                <div class="name">${fruit.name}</div>
+                <div class="rarity">${fruit.rarity}</div>
+            `;
+            return card;
+        }
+
+        // Khởi tạo băng chuyền ban đầu
+        function initReel() {
+            const track = document.getElementById('reelTrack');
+            track.innerHTML = '';
+            for (let i = 0; i < 60; i++) {
+                const randomFruit = fruitsData[Math.floor(Math.random() * fruitsData.length)];
+                track.appendChild(createCardElement(randomFruit));
+            }
+        }
+
+        // 2. Hàm xử lý logic Quay
+        function spin() {
+            if (isSpinning) return;
+            isSpinning = true;
+
+            const spinBtn = document.getElementById('spinBtn');
+            const resultDisplay = document.getElementById('resultDisplay');
+            const track = document.getElementById('reelTrack');
+            const windowWidth = document.getElementById('reelWindow').offsetWidth;
+
+            spinBtn.disabled = true;
+            resultDisplay.textContent = "Đang quay...";
+
+            // Chọn kết quả trúng theo tỷ lệ
+            const winFruit = getRandomFruit();
+
+            // Render lại danh sách thẻ: gán chính xác winFruit vào TARGET_INDEX (vị trí 50)
+            track.innerHTML = '';
+            for (let i = 0; i < 70; i++) {
+                if (i === TARGET_INDEX) {
+                    track.appendChild(createCardElement(winFruit));
+                } else {
+                    const randomFruit = fruitsData[Math.floor(Math.random() * fruitsData.length)];
+                    track.appendChild(createCardElement(randomFruit));
+                }
+            }
+
+            // 3. Tính toán Tọa độ căn chỉnh chính xác 100% vào giữa Mũi tên
+            // Điểm giữa khung trượt = windowWidth / 2
+            // Điểm giữa của thẻ trúng = (TARGET_INDEX * CARD_WIDTH) + (CARD_WIDTH / 2)
+            const targetOffset = (TARGET_INDEX * CARD_WIDTH) + (CARD_WIDTH / 2) - (windowWidth / 2);
+
+            // Thêm hiệu ứng trượt CSS Animation
+            track.style.transition = 'transform 5s cubic-bezier(0.15, 0.9, 0.15, 1)';
+            track.style.transform = `translateX(-${targetOffset}px)`;
+
+            // Khi kết thúc animation (sau 5s)
+            setTimeout(() => {
+                isSpinning = false;
+                spinBtn.disabled = false;
+
+                // Hiển thị kết quả
+                resultDisplay.innerHTML = `Chúc mừng! Bạn nhận được: <span style="color:#f59e0b">${winFruit.emoji} ${winFruit.name}</span> (${winFruit.rarity})`;
+
+                // Thêm vào Lịch sử
+                addHistory(winFruit);
+            }, 5000);
+        }
+
+        // Thêm kết quả vào lịch sử
+        function addHistory(fruit) {
+            const historyList = document.getElementById('historyList');
+            const li = document.createElement('li');
+            li.className = 'history-item';
+            li.innerHTML = `
+                <span>${fruit.emoji} <strong>${fruit.name}</strong></span>
+                <span class="${fruit.rarity}">${fruit.rarity} (${fruit.chance}%)</span>
+            `;
+            historyList.prepend(li);
+        }
+
+        // Chạy khởi tạo khi tải trang
+        initReel();
+    </script>
+</body>
+</html>
